@@ -1,0 +1,274 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Lujos el Paisa</title>
+    <style>
+        /* Estilos base para todos los dispositivos */
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 0;
+        }
+        header {
+            background-color: #333;
+            color: #fff;
+            padding: 10px 0;
+            text-align: center;
+        }
+        nav {
+            background-color: #444;
+            padding: 10px 0;
+            text-align: center;
+        }
+        nav input[type="text"] {
+            padding: 8px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            margin-right: 5px;
+            transition: border-color 0.3s ease-in-out; /* Transición suave para el cambio de color */
+            width: 60%; /* Ancho inicial del input */
+        }
+        nav input[type="text"].error {
+            border-color: red; /* Cambia el borde a rojo en caso de error */
+        }
+        nav button {
+            padding: 8px 15px;
+            background-color: #007bff;
+            color: #fff;
+            border: none;
+            cursor: pointer;
+            border-radius: 4px;
+        }
+        .container {
+            max-width: 1200px;
+            margin: 20px auto;
+            padding: 0 20px;
+        }
+        .product {
+            border: 1px solid #ccc;
+            margin-bottom: 20px;
+            padding: 10px;
+            overflow: hidden;
+        }
+        .product img {
+            float: left;
+            margin-right: 10px;
+            width: 100px; /* Ajusta el tamaño de la imagen según sea necesario */
+            height: auto;
+        }
+        .product h3 {
+            margin-top: 0;
+        }
+        .section {
+            display: none; /* Ocultar todas las secciones de productos por defecto */
+        }
+        .section.active {
+            display: block; /* Mostrar solo la sección activa */
+        }
+        .suggestion {
+            color: red;
+            font-weight: bold;
+            margin-top: 5px;
+        }
+
+        /* Media queries para ajustar el diseño según el tamaño de la pantalla */
+        @media (max-width: 768px) {
+            /* Estilos para dispositivos móviles y tablets */
+            nav input[type="text"] {
+                width: 80%; /* Ajusta el ancho del input en dispositivos móviles */
+            }
+        }
+
+        @media (min-width: 769px) and (max-width: 1200px) {
+            /* Estilos para tablets y pantallas más grandes */
+            nav input[type="text"] {
+                width: 70%; /* Ajusta el ancho del input en tablets */
+            }
+        }
+
+        @media (min-width: 1201px) {
+            /* Estilos para pantallas de PC y televisores */
+            nav input[type="text"] {
+                width: 60%; /* Mantiene el ancho inicial del input en pantallas más grandes */
+            }
+        }
+    </style>
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const buttons = document.querySelectorAll('.category-button');
+            const sections = document.querySelectorAll('.section');
+
+            buttons.forEach(button => {
+                button.addEventListener('click', function() {
+                    const target = this.getAttribute('data-target');
+                    showSection(target);
+                });
+            });
+
+            const form = document.querySelector('form');
+            form.addEventListener('submit', function(event) {
+                event.preventDefault();
+                const input = document.querySelector('input[name="search"]');
+                let searchTerm = input.value.trim().toLowerCase();
+                let found = false;
+
+                sections.forEach(section => {
+                    const category = section.getAttribute('id');
+                    const products = section.querySelectorAll('.product');
+                    products.forEach(product => {
+                        const productName = product.querySelector('h3').textContent.toLowerCase();
+                        if (productName.includes(searchTerm) || category.includes(searchTerm)) {
+                            showSection(category);
+                            found = true;
+                        }
+                    });
+                });
+
+                if (!found) {
+                    input.classList.add('error'); // Añadir clase de error para cambiar el borde a rojo
+                    showSuggestion(searchTerm); // Mostrar sugerencia de término similar
+                } else {
+                    input.classList.remove('error'); // Quitar clase de error si se encontró
+                }
+
+                input.value = '';
+            });
+
+            function showSection(sectionId) {
+                sections.forEach(section => {
+                    if (section.getAttribute('id') === sectionId) {
+                        section.classList.add('active');
+                    } else {
+                        section.classList.remove('active');
+                    }
+                });
+            }
+
+            function showSuggestion(searchTerm) {
+                let closestMatch = findClosestMatch(searchTerm);
+                if (closestMatch) {
+                    const suggestionElement = document.createElement('div');
+                    suggestionElement.classList.add('suggestion');
+                    suggestionElement.textContent = `No se encontró "${searchTerm}". ¿Quisiste decir "${closestMatch}"?`;
+                    form.appendChild(suggestionElement);
+
+                    setTimeout(() => {
+                        suggestionElement.remove(); // Quitar la sugerencia después de unos segundos
+                    }, 5000); // Tiempo en milisegundos antes de remover la sugerencia
+                }
+            }
+
+            function findClosestMatch(searchTerm) {
+                // Array de términos para comparar
+                const categories = ['bombillos', 'tejas']; // Agrega más categorías según sea necesario
+                let closestMatch = null;
+                let minDistance = Infinity;
+
+                // Buscar la categoría más cercana al término buscado
+                categories.forEach(category => {
+                    const distance = computeLevenshteinDistance(searchTerm, category);
+                    if (distance < minDistance) {
+                        minDistance = distance;
+                        closestMatch = category;
+                    }
+                });
+
+                return closestMatch;
+            }
+
+            function computeLevenshteinDistance(a, b) {
+                if (a.length === 0) return b.length;
+                if (b.length === 0) return a.length;
+
+                let matrix = [];
+                let i, j;
+
+                // Inicializar la primera fila y la primera columna de la matriz
+                for (i = 0; i <= b.length; i++) {
+                    matrix[i] = [i];
+                }
+
+                for (j = 0; j <= a.length; j++) {
+                    matrix[0][j] = j;
+                }
+
+                // Calcular la distancia de Levenshtein
+                for (i = 1; i <= b.length; i++) {
+                    for (j = 1; j <= a.length; j++) {
+                        if (b.charAt(i - 1) === a.charAt(j - 1)) {
+                            matrix[i][j] = matrix[i - 1][j - 1];
+                        } else {
+                            matrix[i][j] = Math.min(
+                                matrix[i - 1][j - 1] + 1, // Reemplazo
+                                matrix[i][j - 1] + 1,     // Inserción
+                                matrix[i - 1][j] + 1      // Eliminación
+                            );
+                        }
+                    }
+                }
+
+                return matrix[b.length][a.length];
+            }
+        });
+    </script>
+</head>
+<body>
+    <header>
+        <h1>Lujos el Paisa</h1>
+    </header>
+    <nav>
+        <form action="#" method="get">
+            <input type="text" name="search" placeholder="Buscar productos o categorías...">
+            <button type="submit">Buscar</button>
+        </form>
+    </nav>
+    <div class="container">
+        <section id="botones">
+            <h2>Elije una categoría:</h2>
+            <button class="category-button" data-target="bombillos">Bombillos</button>
+            <button class="category-button" data-target="tejas">Tejas</button>
+        </section>
+        <section id="bombillos" class="section">
+            <h2>Bombillos</h2>
+            <div class="product">
+                <img src="bombillo1.jpg" alt="Bombillo 1">
+                <h3>Bombillo 1</h3>
+                <p>Descripción del bombillo 1.</p>
+                <p>Precio: $10.00</p>
+                <button>Agregar al carrito</button>
+            </div>
+            <div class="product">
+                <img src="bombillo2.jpg" alt="Bombillo 2">
+                <h3>Bombillo 2</h3>
+                <p>Descripción del bombillo 2.</p>
+                <p>Precio: $12.00</p>
+                <button>Agregar al carrito</button>
+            </div>
+            <!-- Añade más bombillos según sea necesario -->
+        </section>
+        <section id="tejas" class="section">
+            <h2>Tejas</h2>
+            <div class="product">
+                <img src="teja1.jpg" alt="Teja 1">
+                <h3>Teja 1</h3>
+                <p>Descripción de la teja 1.</p>
+                <p>Precio: $20.00</p>
+                <button>Agregar al carrito</button>
+            </div>
+            <div class="product">
+                <img src="teja2.jpg" alt="Teja 2">
+                <h3>Teja 2</h3>
+                <p>Descripción de la teja 2.</p>
+                <p>Precio: $22.00</p>
+                <button>Agregar al carrito</button>
+            </div>
+            <!-- Añade más tejas según sea necesario -->
+        </section>
+    </div>
+    <footer>
+        <p>&copy; 2024 Lujos el Paisa. Todos los derechos reservados.</p>
+    </footer>
+</body>
+</html>
